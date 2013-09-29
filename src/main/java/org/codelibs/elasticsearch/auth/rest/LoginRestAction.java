@@ -17,17 +17,17 @@ import org.elasticsearch.rest.XContentRestResponse;
 import org.elasticsearch.rest.XContentThrowableRestResponse;
 import org.elasticsearch.rest.action.support.RestXContentBuilder;
 
-public class AuthRestAction extends BaseRestHandler {
+public class LoginRestAction extends BaseRestHandler {
 
     @Inject
-    public AuthRestAction(final Settings settings, final Client client,
+    public LoginRestAction(final Settings settings, final Client client,
             final RestController restController) {
         super(settings, client);
 
-        restController.registerHandler(RestRequest.Method.GET,
-                "/{index}/{type}/_auth", this);
-        restController.registerHandler(RestRequest.Method.GET,
-                "/{index}/_auth", this);
+        restController.registerHandler(RestRequest.Method.GET, "/_auth/login",
+                this);
+        restController.registerHandler(RestRequest.Method.POST, "/_auth/login",
+                this);
     }
 
     @Override
