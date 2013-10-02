@@ -11,6 +11,7 @@ import org.codelibs.elasticsearch.auth.filter.ContentFilter;
 import org.codelibs.elasticsearch.auth.filter.LoginFilter;
 import org.codelibs.elasticsearch.auth.logic.LoginLogic;
 import org.codelibs.elasticsearch.auth.security.Authenticator;
+import org.codelibs.elasticsearch.auth.security.IndexAuthenticator;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
@@ -32,6 +33,10 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
         logger.info("Creating authenticators.");
 
+        final IndexAuthenticator indexAuthenticator = new IndexAuthenticator(
+                client);
+        // TODO parameters
+        registerAuthenticator("default", indexAuthenticator);
     }
 
     @Override

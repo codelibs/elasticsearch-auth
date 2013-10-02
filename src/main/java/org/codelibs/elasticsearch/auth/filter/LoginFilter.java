@@ -1,7 +1,10 @@
 package org.codelibs.elasticsearch.auth.filter;
 
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.rest.RestStatus.OK;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.codelibs.elasticsearch.auth.security.Authenticator;
@@ -12,7 +15,8 @@ import org.elasticsearch.rest.RestFilter;
 import org.elasticsearch.rest.RestFilterChain;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
-import org.elasticsearch.rest.StringRestResponse;
+import org.elasticsearch.rest.XContentRestResponse;
+import org.elasticsearch.rest.XContentThrowableRestResponse;
 
 public class LoginFilter extends RestFilter {
     private static final ESLogger logger = Loggers.getLogger(LoginFilter.class);
@@ -37,24 +41,29 @@ public class LoginFilter extends RestFilter {
             if (method == request.method()) {
                 final String rawPath = request.rawPath();
                 if (loginPath.equals(rawPath)) {
-                    final StringBuilder contentBuf = new StringBuilder(255);
+
+                    final Map<String, Object> sourceMap = new HashMap<String, Object>();
                     for (final Map.Entry<String, Authenticator> entry : authenticatorMap
                             .entrySet()) {
-                        final String loginContent = entry.getValue().login(
-                                request);
-                        if (loginContent != null) {
-                            if (contentBuf.length() > 0) {
-                                contentBuf.append('{');
-                            } else {
-                                contentBuf.append(',');
-                            }
-                            contentBuf.append('"').append(entry.getKey())
-                                    .append("\":").append(loginContent);
+                        final Map<String, Object> loginObj = entry.getValue()
+                                .login(request);
+                        if (loginObj != null) {
+                            sourceMap.put(entry.getKey(), loginObj);
                         }
                     }
-                    contentBuf.append('}');
-                    channel.sendResponse(new StringRestResponse(OK, contentBuf
-                            .toString()));
+                    try {
+                        channel.sendResponse(new XContentRestResponse(request,
+                                OK, jsonBuilder().value(sourceMap)));
+                    } catch (final IOException e) {
+                        logger.error("Failed to send a response.", e);
+                        try {
+                            channel.sendResponse(new XContentThrowableRestResponse(
+                                    request, e));
+                        } catch (final IOException e1) {
+                            logger.error("Failed to send a failure response.",
+                                    e1);
+                        }
+                    }
                     return;
                 }
             }
