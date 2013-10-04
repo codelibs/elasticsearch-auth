@@ -109,18 +109,19 @@ public class IndexAuthenticator implements Authenticator {
             final String[] roles) {
         try {
             final XContentBuilder builder = jsonBuilder() //
-                    .startObject();
+                    .startObject().field("doc").startObject();
             if (password != null) {
                 builder.field("password", hashPassword(password));
             }
             if (roles != null) {
                 builder.field("roles", roles);
             }
-            builder.endObject();
+            builder.endObject().endObject();
+            final String userId = getUserId(username);
             final UpdateResponse response = client
-                    .prepareUpdate(authIndex, userType, getUserId(username))
+                    .prepareUpdate(authIndex, userType, userId)
                     .setSource(builder).setRefresh(true).execute().actionGet();
-            if (response.getGetResult().isExists()) {
+            if (!userId.equals(response.getId())) {
                 throw new AuthException(RestStatus.BAD_REQUEST,
                         "Could not update " + username);
             }

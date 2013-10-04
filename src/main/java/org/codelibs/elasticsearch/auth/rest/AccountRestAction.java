@@ -85,7 +85,8 @@ public class AccountRestAction extends BaseRestHandler {
                     ResponseUtil.send(request, channel, RestStatus.OK);
                 }
             } else if (request.method() == Method.POST) {
-                if (authenticator == null || username == null) {
+                if (authenticator == null || username == null
+                        || password == null && roles == null) {
                     ResponseUtil
                             .send(request, channel, RestStatus.BAD_REQUEST,
                                     "message",
@@ -96,8 +97,7 @@ public class AccountRestAction extends BaseRestHandler {
                     ResponseUtil.send(request, channel, RestStatus.OK);
                 }
             } else if (request.method() == Method.DELETE) {
-                if (authenticator == null || username == null
-                        || password == null || roles == null) {
+                if (authenticator == null || username == null) {
                     ResponseUtil.send(request, channel, RestStatus.BAD_REQUEST,
                             "message", "authenticator or username are null.");
                 } else {

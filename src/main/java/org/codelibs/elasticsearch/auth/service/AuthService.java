@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -26,6 +27,9 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.netty.handler.codec.http.Cookie;
+import org.elasticsearch.common.netty.handler.codec.http.CookieDecoder;
+import org.elasticsearch.common.netty.handler.codec.http.HttpHeaders;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.indices.IndexMissingException;
@@ -55,7 +59,9 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
     private ContentFilter contentFilter;
 
-    private long sessionTimeout = 1000 * 60 * 30; // 30min
+    private long sessionTimeout;
+
+    private boolean cookieToken;
 
     @Inject
     public AuthService(final Settings settings, final Client client,
@@ -69,7 +75,8 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
         constraintIndex = settings.get("auth.constraint.index", "security");
         constraintType = settings.get("auth.constraint.type", "constraint");
         sessionTimeout = settings.getAsLong("auth.token.timeout",
-                Long.valueOf(1000 * 60 * 30));
+                Long.valueOf(1000 * 60 * 30));// 30min
+        cookieToken = settings.getAsBoolean("auth.token.cookie", true);
 
         // Default 
         final IndexAuthenticator indexAuthenticator = new IndexAuthenticator(
@@ -205,8 +212,22 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     public String getToken(final RestRequest request) {
-        final String token = request.param(tokenKey);
-        // TODO cookie
+        String token = request.param(tokenKey);
+        //   cookie
+        if (token == null && cookieToken) {
+            final String cookieString = request
+                    .header(HttpHeaders.Names.COOKIE);
+            if (cookieString != null) {
+                final CookieDecoder cookieDecoder = new CookieDecoder();
+                final Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+                for (final Cookie cookie : cookies) {
+                    if (tokenKey.equals(cookie.getName())) {
+                        token = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+        }
         return token;
     }
 

@@ -16,6 +16,22 @@ Elasticsearch Auth Plugin provides an authentication filter for Elasticsearch co
         \"roles\" : [\"user\", \"admin\"]
     }"
 
+### Update
+
+    $ curl -XPOST 'localhost:9200/_auth/account' -d "{
+        \"authenticator\" : \"index\",
+        \"username\" : \"testuser\",
+        \"password\" : \"test321\",
+        \"roles\" : [\"user\"]
+    }"
+
+### Delete
+
+    $ curl -XDELETE 'localhost:9200/_auth/account' -d "{
+        \"authenticator\" : \"index\",
+        \"username\" : \"testuser\"
+    }"
+
 ## Constraint
 
     $ curl -XPOST 'localhost:9200/security/constraint/' -d "{
