@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -246,7 +247,19 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     private LoginConstraint[] getLoginConstraints() {
-        final List<LoginConstraint> constraintList = new ArrayList<LoginConstraint>();
+        final Map<String, LoginConstraint> constraintMap = new TreeMap<String, LoginConstraint>(
+                new Comparator<String>() {
+                    @Override
+                    public int compare(final String path1, final String path2) {
+                        final int length1 = path1.length();
+                        final int length2 = path2.length();
+                        if (length1 == length2) {
+                            return path1.compareTo(path2) > 0 ? 1 : -1;
+                        }
+                        return length1 < length2 ? -1 : 1;
+                    }
+                });
+
         try {
             final SearchResponse response = client
                     .prepareSearch(constraintIndex).setTypes(constraintType)
@@ -256,6 +269,9 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
             if (hits.totalHits() != 0) {
                 for (final SearchHit hit : hits) {
                     final Map<String, Object> sourceMap = hit.sourceAsMap();
+                    final List<String> methodList = MapUtil.getAsList(
+                            sourceMap, "methods",
+                            Collections.<String> emptyList());
                     final List<String> pathList = MapUtil.getAsList(sourceMap,
                             "paths", Collections.<String> emptyList());
                     final List<String> roleList = MapUtil.getAsList(sourceMap,
@@ -267,11 +283,20 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                     if (!pathList.isEmpty() && !roleList.isEmpty()
                             && authenticator != null) {
                         for (final String path : pathList) {
-                            final LoginConstraint loginLogic = new LoginConstraint();
-                            loginLogic.setPath(path);
-                            loginLogic.setRoles(roleList.toArray(roleList
-                                    .toArray(new String[roleList.size()])));
-                            constraintList.add(loginLogic);
+                            LoginConstraint constraint = constraintMap
+                                    .get(path);
+                            if (constraint == null) {
+                                constraint = new LoginConstraint();
+                                constraint.setPath(path);
+                                constraintMap.put(path, constraint);
+                            }
+                            constraint
+                                    .addCondition(
+                                            methodList
+                                                    .toArray(new String[methodList
+                                                            .size()]),
+                                            roleList.toArray(new String[roleList
+                                                    .size()]));
                         }
                     } else {
                         logger.warn("Invaid login settings: " + sourceMap);
@@ -279,26 +304,8 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                 }
             }
 
-            if (!constraintList.isEmpty()) {
-                Collections.sort(constraintList,
-                        new Comparator<LoginConstraint>() {
-                            @Override
-                            public int compare(final LoginConstraint o1,
-                                    final LoginConstraint o2) {
-                                final String path1 = o1.getPath();
-                                final String path2 = o2.getPath();
-                                final int length1 = path1.length();
-                                final int length2 = path2.length();
-                                if (length1 == length2) {
-                                    return path1.compareTo(path2) > 0 ? 1 : -1;
-                                }
-                                return length1 < length2 ? -1 : 1;
-                            }
-                        });
-            }
-
-            return constraintList.toArray(new LoginConstraint[constraintList
-                    .size()]);
+            return constraintMap.values().toArray(
+                    new LoginConstraint[constraintMap.size()]);
 
         } catch (final IndexMissingException e) {
             logger.error(constraintIndex + "/" + constraintType

@@ -53,7 +53,7 @@ public class ContentFilter extends RestFilter {
                             "message", "Forbidden. Invalid token.");
                     return;
                 } else if (authService.authenticate(token,
-                        constraint.getRoles())) {
+                        constraint.getRoles(request.method()))) {
                     // ok
                     break;
                 } else {

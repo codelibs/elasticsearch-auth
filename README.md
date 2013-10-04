@@ -5,7 +5,7 @@ Elasticsearch Auth Plugin
 
 Elasticsearch Auth Plugin provides an authentication filter for Elasticsearch contents.
 
-## User
+## User Management
 
 ### Create
 
@@ -32,12 +32,20 @@ Elasticsearch Auth Plugin provides an authentication filter for Elasticsearch co
         \"username\" : \"testuser\"
     }"
 
-## Constraint
+## Content Constraints
 
     $ curl -XPOST 'localhost:9200/security/constraint/' -d "{
         \"authenticator\" : \"index\",
         \"paths\" : [\"/aaa\"],
+        \"methods\" : [\"get\", \"post\", \"put\"],
         \"roles\" : [\"admin\"]
+    }"
+
+    $ curl -XPOST 'localhost:9200/security/constraint/' -d "{
+        \"authenticator\" : \"index\",
+        \"paths\" : [\"/aaa\"],
+        \"methods\" : [\"get\"],
+        \"roles\" : [\"user\"]
     }"
 
 ## Reload Configuration
@@ -57,5 +65,11 @@ Elasticsearch Auth Plugin provides an authentication filter for Elasticsearch co
 
     $ curl -XPOST 'localhost:9200/logout?token=....'
 
+
+## TTL for Token
+
+    $ curl -XPUT 'localhost:9200/auth/token/_mapping' -d "{
+        \"_ttl\" : { \"enabled\" : true, \"default\" : \"1d\" }
+    }"
 
 
