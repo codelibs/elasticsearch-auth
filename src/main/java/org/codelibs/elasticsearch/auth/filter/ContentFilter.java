@@ -1,43 +1,65 @@
 package org.codelibs.elasticsearch.auth.filter;
 
-import static org.elasticsearch.rest.RestStatus.OK;
-
-import java.io.IOException;
-
-import org.codelibs.elasticsearch.auth.logic.LoginLogic;
+import org.codelibs.elasticsearch.auth.security.LoginConstraint;
+import org.codelibs.elasticsearch.auth.service.AuthService;
+import org.codelibs.elasticsearch.auth.util.ResponseUtil;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestFilter;
 import org.elasticsearch.rest.RestFilterChain;
 import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.XContentRestResponse;
-import org.elasticsearch.rest.XContentThrowableRestResponse;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
+import org.elasticsearch.rest.RestStatus;
 
 public class ContentFilter extends RestFilter {
     private static final ESLogger logger = Loggers
             .getLogger(ContentFilter.class);
 
-    private LoginLogic[] loginLogics;
+    private volatile LoginConstraint[] constraints = null;
 
-    public ContentFilter(final LoginLogic[] loginLogics) {
-        this.loginLogics = loginLogics;
+    private AuthService authService;
+
+    public ContentFilter(final AuthService authService) {
+        this.authService = authService;
     }
 
     @Override
     public void process(final RestRequest request, final RestChannel channel,
             final RestFilterChain filterChain) {
+        if (constraints == null) {
+            try {
+                authService.reload();
+            } catch (final Exception e) {
+                logger.warn("Failed to reload AuthService.", e);
+            }
+            if (constraints == null) {
+                ResponseUtil.send(request, channel,
+                        RestStatus.SERVICE_UNAVAILABLE, "message",
+                        "A service is not available.");
+                return;
+            }
+        }
+
         final String rawPath = request.rawPath();
-        for (final LoginLogic loginLogic : loginLogics) {
-            if (loginLogic.match(rawPath)) {
-                if (loginLogic.authenticate(request)) {
+        for (final LoginConstraint constraint : constraints) {
+            if (constraint.match(rawPath)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug(rawPath + " is filtered.");
+                }
+                final String token = authService.getToken(request);
+                if (token == null) {
+                    // invalid
+                    ResponseUtil.send(request, channel, RestStatus.FORBIDDEN,
+                            "message", "Forbidden. Invalid token.");
+                    return;
+                } else if (authService.authenticate(token,
+                        constraint.getRoles())) {
                     // ok
                     break;
                 } else {
                     // invalid
-                    processError(request, channel);
+                    ResponseUtil.send(request, channel, RestStatus.FORBIDDEN,
+                            "message", "Forbidden. Not authorized.");
                     return;
                 }
             }
@@ -45,26 +67,8 @@ public class ContentFilter extends RestFilter {
         filterChain.continueProcessing(request, channel);
     }
 
-    protected void processError(final RestRequest request,
-            final RestChannel channel) {
-        try {
-            final XContentBuilder builder = RestXContentBuilder
-                    .restContentBuilder(request);
-            builder.startObject();
-            builder.field("status", "error");
-            builder.field("code", 403);
-            builder.field("message", "Forbidden");
-            builder.endObject();
-            channel.sendResponse(new XContentRestResponse(request, OK, builder));
-        } catch (final IOException e) {
-            logger.error("Failed to send a error response.", e);
-            try {
-                channel.sendResponse(new XContentThrowableRestResponse(request,
-                        e));
-            } catch (final IOException e1) {
-                logger.error("Failed to send a response.", e1);
-            }
-        }
+    public void setLoginConstraints(final LoginConstraint[] constraints) {
+        this.constraints = constraints;
     }
 
 }

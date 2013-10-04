@@ -1,13 +1,15 @@
 package org.codelibs.elasticsearch.auth.security;
 
-import java.util.Map;
-
 import org.elasticsearch.rest.RestRequest;
 
 public interface Authenticator {
 
-    boolean authenticate(RestRequest request, String[] roles);
+    String[] login(RestRequest request);
 
-    Map<String, Object> login(RestRequest request);
+    void createUser(String username, String password, String[] roles);
+
+    void updateUser(String username, String password, String[] roles);
+
+    void deleteUser(String username);
 
 }

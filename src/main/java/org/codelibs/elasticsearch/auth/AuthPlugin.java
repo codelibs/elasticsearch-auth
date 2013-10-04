@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import org.codelibs.elasticsearch.auth.module.AuthModule;
 import org.codelibs.elasticsearch.auth.rest.AccountRestAction;
+import org.codelibs.elasticsearch.auth.rest.ReloadRestAction;
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.component.LifecycleComponent;
@@ -25,6 +26,7 @@ public class AuthPlugin extends AbstractPlugin {
     // for Rest API
     public void onModule(final RestModule module) {
         module.addRestAction(AccountRestAction.class);
+        module.addRestAction(ReloadRestAction.class);
     }
 
     // for Service
