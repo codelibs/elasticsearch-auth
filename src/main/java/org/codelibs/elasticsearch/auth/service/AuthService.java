@@ -42,6 +42,14 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 
 public class AuthService extends AbstractLifecycleComponent<AuthService> {
+    private static final String DEFAULT_CONSTRAINT_TYPE = "constraint";
+
+    private static final String DEFAULT_CONSTRAINT_INDEX_NAME = "security";
+
+    private static final String DEFAULT_COOKIE_TOKEN_NAME = "eaid";
+
+    private static final String DEFAULT_GUEST_ROLE = "guest";
+
     private RestController restController;
 
     private Map<String, Authenticator> authenticatorMap = new LinkedHashMap<String, Authenticator>();
@@ -58,11 +66,15 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
     private String tokenKey = "token";
 
+    private String guestRole;
+
     private ContentFilter contentFilter;
 
     private long sessionTimeout;
 
-    private boolean cookieToken;
+    private boolean cookieToken = true;
+
+    private String cookieTokenName;
 
     @Inject
     public AuthService(final Settings settings, final Client client,
@@ -73,11 +85,17 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
         logger.info("Creating authenticators.");
 
-        constraintIndex = settings.get("auth.constraint.index", "security");
-        constraintType = settings.get("auth.constraint.type", "constraint");
+        constraintIndex = settings.get("auth.constraint.index", DEFAULT_CONSTRAINT_INDEX_NAME);
+        constraintType = settings.get("auth.constraint.type", DEFAULT_CONSTRAINT_TYPE);
         sessionTimeout = settings.getAsLong("auth.token.timeout",
                 Long.valueOf(1000 * 60 * 30));// 30min
-        cookieToken = settings.getAsBoolean("auth.token.cookie", true);
+        cookieTokenName = settings.get("auth.token.cookie", DEFAULT_COOKIE_TOKEN_NAME);
+        guestRole = settings.get("auth.role.guest", DEFAULT_GUEST_ROLE);
+
+        if (cookieTokenName.trim().length() == 0
+                || "false".equalsIgnoreCase(cookieTokenName)) {
+            cookieToken = false;
+        }
 
         // Default 
         final IndexAuthenticator indexAuthenticator = new IndexAuthenticator(
@@ -158,7 +176,15 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     public boolean authenticate(final String token, final String[] roles) {
-        if (token != null) {
+        if (token == null) {
+            if (roles != null) {
+                for (String role : roles) {
+                    if (guestRole.equals(role)) {
+                        return true;
+                    }
+                }
+            }
+        } else {
             final GetResponse response = client
                     .prepareGet(authTokenIndex, tokenType, token).execute()
                     .actionGet();
@@ -222,7 +248,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                 final CookieDecoder cookieDecoder = new CookieDecoder();
                 final Set<Cookie> cookies = cookieDecoder.decode(cookieString);
                 for (final Cookie cookie : cookies) {
-                    if (tokenKey.equals(cookie.getName())) {
+                    if (cookieTokenName.equals(cookie.getName())) {
                         token = cookie.getValue();
                         break;
                     }

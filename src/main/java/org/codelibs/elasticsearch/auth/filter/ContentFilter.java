@@ -46,13 +46,7 @@ public class ContentFilter extends RestFilter {
                 if (logger.isDebugEnabled()) {
                     logger.debug(rawPath + " is filtered.");
                 }
-                final String token = authService.getToken(request);
-                if (token == null) {
-                    // invalid
-                    ResponseUtil.send(request, channel, RestStatus.FORBIDDEN,
-                            "message", "Forbidden. Invalid token.");
-                    return;
-                } else if (authService.authenticate(token,
+                if (authService.authenticate(authService.getToken(request),
                         constraint.getRoles(request.method()))) {
                     // ok
                     break;
