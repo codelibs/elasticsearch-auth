@@ -7,8 +7,10 @@ import java.util.Map;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.codelibs.elasticsearch.auth.AuthException;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -40,7 +42,8 @@ public class IndexAuthenticator implements Authenticator {
     }
 
     @Override
-    public String[] login(final RestRequest request) {
+    public void login(final RestRequest request,
+            final ActionListener<String[]> listener) {
         String username = request.param(usernameKey);
         String password = request.param(passwordKey);
         final BytesReference content = request.content();
@@ -58,8 +61,8 @@ public class IndexAuthenticator implements Authenticator {
                         password);
             }
         } catch (final Exception e) {
-            logger.error("Could not parse the content.", e);
-            return null;
+            listener.onFailure(e);
+            return;
         } finally {
             if (parser != null) {
                 parser.close();
@@ -67,28 +70,51 @@ public class IndexAuthenticator implements Authenticator {
         }
 
         if (username == null) {
-            return null;
+            listener.onResponse(new String[0]);
+            return;
         }
 
-        final GetResponse response = client
-                .prepareGet(authIndex, userType, getUserId(username)).execute()
-                .actionGet();
-        final Map<String, Object> sourceMap = response.getSource();
-        if (sourceMap != null) {
-            final String hash = (String) sourceMap.get("password");
-            if (hash != null && hash.equals(hashPassword(password))) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug(sourceMap.get("username") + " is logged in.");
-                }
-                return MapUtil.getAsArray(sourceMap, "roles", new String[0]);
-            }
-        }
-        return null;
+        processLogin(username, password, listener);
+
+    }
+
+    private void processLogin(final String username, final String password,
+            final ActionListener<String[]> listener) {
+        client.prepareGet(authIndex, userType, getUserId(username)).execute(
+                new ActionListener<GetResponse>() {
+
+                    @Override
+                    public void onResponse(final GetResponse response) {
+                        final Map<String, Object> sourceMap = response
+                                .getSource();
+                        if (sourceMap != null) {
+                            final String hash = (String) sourceMap
+                                    .get("password");
+                            if (hash != null
+                                    && hash.equals(hashPassword(password))) {
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug(sourceMap.get("username")
+                                            + " is logged in.");
+                                }
+                                listener.onResponse(MapUtil.getAsArray(
+                                        sourceMap, "roles", new String[0]));
+                                return;
+                            }
+                        }
+                        listener.onResponse(new String[0]);
+                        return;
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
     }
 
     @Override
     public void createUser(final String username, final String password,
-            final String[] roles) {
+            final String[] roles, final ActionListener<Void> listener) {
         try {
             final XContentBuilder builder = jsonBuilder() //
                     .startObject() //
@@ -97,19 +123,33 @@ public class IndexAuthenticator implements Authenticator {
                     .field("roles", roles) //
                     .endObject();
             client.prepareIndex(authIndex, userType, getUserId(username))
-                    .setSource(builder).setRefresh(true).execute().actionGet();
+                    .setSource(builder).setRefresh(true)
+                    .execute(new ActionListener<IndexResponse>() {
+                        @Override
+                        public void onResponse(final IndexResponse response) {
+                            listener.onResponse(null);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            listener.onFailure(new AuthException(
+                                    RestStatus.INTERNAL_SERVER_ERROR,
+                                    "Could not create " + username, e));
+                        }
+                    });
         } catch (final Exception e) {
-            throw new AuthException(RestStatus.INTERNAL_SERVER_ERROR,
-                    "Could not create " + username, e);
+            listener.onFailure(new AuthException(
+                    RestStatus.INTERNAL_SERVER_ERROR, "Could not create "
+                            + username, e));
         }
     }
 
     @Override
     public void updateUser(final String username, final String password,
-            final String[] roles) {
+            final String[] roles, final ActionListener<Void> listener) {
         try {
-            final XContentBuilder builder = jsonBuilder() //
-                    .startObject().field("doc").startObject();
+            final XContentBuilder builder = jsonBuilder().startObject()
+                    .field("doc").startObject();
             if (password != null) {
                 builder.field("password", hashPassword(password));
             }
@@ -118,38 +158,62 @@ public class IndexAuthenticator implements Authenticator {
             }
             builder.endObject().endObject();
             final String userId = getUserId(username);
-            final UpdateResponse response = client
-                    .prepareUpdate(authIndex, userType, userId)
-                    .setSource(builder).setRefresh(true).execute().actionGet();
-            if (!userId.equals(response.getId())) {
-                throw new AuthException(RestStatus.BAD_REQUEST,
-                        "Could not update " + username);
-            }
-        } catch (final AuthException e) {
-            throw e;
+            client.prepareUpdate(authIndex, userType, userId)
+                    .setSource(builder).setRefresh(true)
+                    .execute(new ActionListener<UpdateResponse>() {
+
+                        @Override
+                        public void onResponse(final UpdateResponse response) {
+                            if (!userId.equals(response.getId())) {
+                                listener.onFailure(new AuthException(
+                                        RestStatus.BAD_REQUEST,
+                                        "Could not update " + username));
+                            } else {
+                                listener.onResponse(null);
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            listener.onFailure(new AuthException(
+                                    RestStatus.INTERNAL_SERVER_ERROR,
+                                    "Could not update " + username, e));
+                        }
+                    });
+
         } catch (final Exception e) {
-            throw new AuthException(RestStatus.INTERNAL_SERVER_ERROR,
-                    "Could not update " + username, e);
+            listener.onFailure(new AuthException(
+                    RestStatus.INTERNAL_SERVER_ERROR, "Could not update "
+                            + username, e));
         }
 
     }
 
     @Override
-    public void deleteUser(final String username) {
-        try {
-            final DeleteResponse response = client
-                    .prepareDelete(authIndex, userType, getUserId(username))
-                    .setRefresh(true).execute().actionGet();
-            if (response.isNotFound()) {
-                throw new AuthException(RestStatus.BAD_REQUEST,
-                        "Could not delete " + username);
-            }
-        } catch (final AuthException e) {
-            throw e;
-        } catch (final Exception e) {
-            throw new AuthException(RestStatus.INTERNAL_SERVER_ERROR,
-                    "Could not delete " + username, e);
-        }
+    public void deleteUser(final String username,
+            final ActionListener<Void> listener) {
+        client.prepareDelete(authIndex, userType, getUserId(username))
+                .setRefresh(true).execute(new ActionListener<DeleteResponse>() {
+
+                    @Override
+                    public void onResponse(final DeleteResponse response) {
+                        if (response.isNotFound()) {
+                            listener.onFailure(new AuthException(
+                                    RestStatus.BAD_REQUEST, "Could not delete "
+                                            + username));
+                        } else {
+                            listener.onResponse(null);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(new AuthException(
+                                RestStatus.INTERNAL_SERVER_ERROR,
+                                "Could not delete " + username, e));
+                    }
+                });
+
     }
 
     protected String getUserId(final String username) {

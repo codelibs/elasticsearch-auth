@@ -22,8 +22,15 @@ import org.codelibs.elasticsearch.auth.security.IndexAuthenticator;
 import org.codelibs.elasticsearch.auth.security.LoginConstraint;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
 import org.elasticsearch.ElasticSearchException;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.refresh.RefreshResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
@@ -33,7 +40,6 @@ import org.elasticsearch.common.netty.handler.codec.http.CookieDecoder;
 import org.elasticsearch.common.netty.handler.codec.http.HttpHeaders;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
@@ -70,8 +76,6 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
     private ContentFilter contentFilter;
 
-    private long sessionTimeout;
-
     private boolean cookieToken = true;
 
     private String cookieTokenName;
@@ -85,11 +89,12 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
         logger.info("Creating authenticators.");
 
-        constraintIndex = settings.get("auth.constraint.index", DEFAULT_CONSTRAINT_INDEX_NAME);
-        constraintType = settings.get("auth.constraint.type", DEFAULT_CONSTRAINT_TYPE);
-        sessionTimeout = settings.getAsLong("auth.token.timeout",
-                Long.valueOf(1000 * 60 * 30));// 30min
-        cookieTokenName = settings.get("auth.token.cookie", DEFAULT_COOKIE_TOKEN_NAME);
+        constraintIndex = settings.get("auth.constraint.index",
+                DEFAULT_CONSTRAINT_INDEX_NAME);
+        constraintType = settings.get("auth.constraint.type",
+                DEFAULT_CONSTRAINT_TYPE);
+        cookieTokenName = settings.get("auth.token.cookie",
+                DEFAULT_COOKIE_TOKEN_NAME);
         guestRole = settings.get("auth.role.guest", DEFAULT_GUEST_ROLE);
 
         if (cookieTokenName.trim().length() == 0
@@ -158,74 +163,198 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
         authenticatorMap.put(name, authenticator);
     }
 
-    public void reload() {
-        // TODO authenticators
-        final LoginConstraint[] constraints = getLoginConstraints();
-        contentFilter.setLoginConstraints(constraints);
+    public void init(final ActionListener<Void> listener) {
+        client.admin().cluster().prepareHealth().setWaitForYellowStatus()
+                .execute(new ActionListener<ClusterHealthResponse>() {
+                    @Override
+                    public void onResponse(final ClusterHealthResponse response) {
+                        if (response.getStatus() == ClusterHealthStatus.RED) {
+                            listener.onFailure(new AuthException(
+                                    RestStatus.SERVICE_UNAVAILABLE,
+                                    "This cluster is not ready."));
+                        } else {
+                            createConstraintIndexIfNotExist(listener);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
     }
 
-    public String createToken(final List<String> roleList) {
+    protected void createConstraintIndexIfNotExist(
+            final ActionListener<Void> listener) {
+        client.admin().indices().prepareExists(constraintIndex)
+                .execute(new ActionListener<IndicesExistsResponse>() {
+                    @Override
+                    public void onResponse(final IndicesExistsResponse response) {
+                        if (response.isExists()) {
+                            reload(listener);
+                        } else {
+                            createConstraintIndex(listener);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
+    }
+
+    protected void createConstraintIndex(final ActionListener<Void> listener) {
+        client.admin().indices().prepareCreate(constraintIndex)
+                .execute(new ActionListener<CreateIndexResponse>() {
+                    @Override
+                    public void onResponse(final CreateIndexResponse response) {
+                        // TODO health check
+                        reload(listener);
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
+    }
+
+    public void reload(final ActionListener<Void> listener) {
+        client.admin().indices().prepareRefresh(constraintIndex).setForce(true)
+                .execute(new ActionListener<RefreshResponse>() {
+                    @Override
+                    public void onResponse(final RefreshResponse response) {
+                        loadLoginConstraints(new ActionListener<LoginConstraint[]>() {
+                            @Override
+                            public void onResponse(
+                                    final LoginConstraint[] constraints) {
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("Load {} constraint(s).",
+                                            constraints.length);
+                                }
+                                contentFilter.setLoginConstraints(constraints);
+                                listener.onResponse(null);
+                            }
+
+                            @Override
+                            public void onFailure(final Throwable e) {
+                                listener.onFailure(e);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
+    }
+
+    public void createToken(final Set<String> roleSet,
+            final ActionListener<String> listener) {
+        if (roleSet == null || roleSet.isEmpty()) {
+            listener.onFailure(new AuthException(RestStatus.BAD_REQUEST,
+                    "Role is empty."));
+            return;
+        }
+
         final String token = generateToken();
 
         final Map<String, Object> sourceMap = new HashMap<String, Object>();
-        sourceMap.put("roles", roleList);
+        sourceMap.put("roles", roleSet);
         sourceMap.put("lastModified", new Date());
         client.prepareIndex(authTokenIndex, tokenType, token)
-                .setSource(sourceMap).setRefresh(true).execute().actionGet();
-        return token;
+                .setSource(sourceMap).setRefresh(true)
+                .execute(new ActionListener<IndexResponse>() {
+                    @Override
+                    public void onResponse(final IndexResponse response) {
+                        listener.onResponse(token);
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
     }
 
-    public boolean authenticate(final String token, final String[] roles) {
+    public void authenticate(final String token, final String[] roles,
+            final ActionListener<Boolean> listener) {
         if (token == null) {
             if (roles != null) {
-                for (String role : roles) {
-                    if (guestRole.equals(role)) {
-                        return true;
-                    }
-                }
-            }
-        } else {
-            final GetResponse response = client
-                    .prepareGet(authTokenIndex, tokenType, token).execute()
-                    .actionGet();
-            final Map<String, Object> sourceMap = response.getSource();
-            if (sourceMap != null) {
-                final Date lastModified = MapUtil.getAsDate(sourceMap,
-                        "lastModified", null);
-                if (lastModified == null
-                        || System.currentTimeMillis() - lastModified.getTime() > sessionTimeout) {
-                    client.prepareDelete(authTokenIndex, tokenType, token)
-                            .setRefresh(true).execute().actionGet();
-                    return false;
-                }
-                final String[] tokenRoles = MapUtil.getAsArray(sourceMap,
-                        "roles", new String[0]);
                 for (final String role : roles) {
-                    for (final String tokenRole : tokenRoles) {
-                        if (role.equals(tokenRole)) {
-                            return true;
-                        }
+                    if (guestRole.equals(role)) {
+                        listener.onResponse(true);
+                        return;
                     }
                 }
             }
+            listener.onResponse(false);
+        } else {
+            client.prepareGet(authTokenIndex, tokenType, token).execute(
+                    new ActionListener<GetResponse>() {
+                        @Override
+                        public void onResponse(final GetResponse response) {
+                            final Map<String, Object> sourceMap = response
+                                    .getSource();
+                            if (sourceMap != null) {
+                                final String[] tokenRoles = MapUtil.getAsArray(
+                                        sourceMap, "roles", new String[0]);
+                                for (final String role : roles) {
+                                    for (final String tokenRole : tokenRoles) {
+                                        if (role.equals(tokenRole)) {
+                                            listener.onResponse(true);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            listener.onResponse(false);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            listener.onFailure(e);
+                        }
+                    });
         }
-        return false;
     }
 
     public void createUser(final String authenticatorName,
-            final String username, final String password, final String[] roles) {
-        getAuthenticator(authenticatorName).createUser(username, password,
-                roles);
+            final String username, final String password, final String[] roles,
+            final ActionListener<Void> listener) {
+        if (authenticatorName == null || username == null || password == null
+                || roles == null) {
+            listener.onFailure(new AuthException(RestStatus.BAD_REQUEST,
+                    "authenticator, username, passowrd or roles is null."));
+        } else {
+            getAuthenticator(authenticatorName).createUser(username, password,
+                    roles, listener);
+        }
     }
 
     public void updateUser(final String authenticatorName,
-            final String username, final String password, final String[] roles) {
-        getAuthenticator(authenticatorName).updateUser(username, password,
-                roles);
+            final String username, final String password, final String[] roles,
+            final ActionListener<Void> listener) {
+        if (authenticatorName == null || username == null || password == null
+                && roles == null) {
+            listener.onFailure(new AuthException(RestStatus.BAD_REQUEST,
+                    "authenticator, username, passowrd or roles are null."));
+        } else {
+            getAuthenticator(authenticatorName).updateUser(username, password,
+                    roles, listener);
+        }
     }
 
-    public void deleteUser(final String authenticatorName, final String username) {
-        getAuthenticator(authenticatorName).deleteUser(username);
+    public void deleteUser(final String authenticatorName,
+            final String username, final ActionListener<Void> listener) {
+        if (authenticatorName == null || username == null) {
+            listener.onFailure(new AuthException(RestStatus.BAD_REQUEST,
+                    "authenticator or username are null."));
+        } else {
+            getAuthenticator(authenticatorName).deleteUser(username, listener);
+        }
     }
 
     public void deleteToken(final String token) {
@@ -272,73 +401,82 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
         return authenticator;
     }
 
-    private LoginConstraint[] getLoginConstraints() {
-        final Map<String, LoginConstraint> constraintMap = new TreeMap<String, LoginConstraint>(
-                new Comparator<String>() {
+    protected void loadLoginConstraints(
+            final ActionListener<LoginConstraint[]> listener) {
+        client.prepareSearch(constraintIndex).setTypes(constraintType)
+                .setQuery(QueryBuilders.queryString("*:*"))
+                .execute(new ActionListener<SearchResponse>() {
                     @Override
-                    public int compare(final String path1, final String path2) {
-                        final int length1 = path1.length();
-                        final int length2 = path2.length();
-                        if (length1 == length2) {
-                            return path1.compareTo(path2) > 0 ? 1 : -1;
+                    public void onResponse(final SearchResponse response) {
+                        final Map<String, LoginConstraint> constraintMap = new TreeMap<String, LoginConstraint>(
+                                new Comparator<String>() {
+                                    @Override
+                                    public int compare(final String path1,
+                                            final String path2) {
+                                        final int length1 = path1.length();
+                                        final int length2 = path2.length();
+                                        if (length1 == length2) {
+                                            return -1 * path1.compareTo(path2);
+                                        }
+                                        return length1 < length2 ? -1 : 1;
+                                    }
+                                });
+                        final SearchHits hits = response.getHits();
+                        if (hits.totalHits() != 0) {
+                            for (final SearchHit hit : hits) {
+                                final Map<String, Object> sourceMap = hit
+                                        .sourceAsMap();
+                                final List<String> methodList = MapUtil
+                                        .getAsList(sourceMap, "methods",
+                                                Collections
+                                                        .<String> emptyList());
+                                final List<String> pathList = MapUtil
+                                        .getAsList(sourceMap, "paths",
+                                                Collections
+                                                        .<String> emptyList());
+                                final List<String> roleList = MapUtil
+                                        .getAsList(sourceMap, "roles",
+                                                Collections
+                                                        .<String> emptyList());
+                                final String authName = MapUtil.getAsString(
+                                        sourceMap, "authenticator", null);
+                                final Authenticator authenticator = authenticatorMap
+                                        .get(authName);
+                                if (!pathList.isEmpty() && !roleList.isEmpty()
+                                        && authenticator != null) {
+                                    for (final String path : pathList) {
+                                        LoginConstraint constraint = constraintMap
+                                                .get(path);
+                                        if (constraint == null) {
+                                            constraint = new LoginConstraint();
+                                            constraint.setPath(path);
+                                            constraintMap.put(path, constraint);
+                                        }
+                                        constraint.addCondition(methodList
+                                                .toArray(new String[methodList
+                                                        .size()]), roleList
+                                                .toArray(new String[roleList
+                                                        .size()]));
+                                    }
+                                } else {
+                                    logger.warn("Invaid login settings: "
+                                            + sourceMap);
+                                }
+                            }
                         }
-                        return length1 < length2 ? -1 : 1;
+
+                        listener.onResponse(constraintMap.values().toArray(
+                                new LoginConstraint[constraintMap.size()]));
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(new AuthException(
+                                RestStatus.INTERNAL_SERVER_ERROR,
+                                constraintIndex + ":" + constraintType
+                                        + " is not found.", e));
                     }
                 });
-
-        try {
-            final SearchResponse response = client
-                    .prepareSearch(constraintIndex).setTypes(constraintType)
-                    .setQuery(QueryBuilders.queryString("*:*")).execute()
-                    .actionGet();
-            final SearchHits hits = response.getHits();
-            if (hits.totalHits() != 0) {
-                for (final SearchHit hit : hits) {
-                    final Map<String, Object> sourceMap = hit.sourceAsMap();
-                    final List<String> methodList = MapUtil.getAsList(
-                            sourceMap, "methods",
-                            Collections.<String> emptyList());
-                    final List<String> pathList = MapUtil.getAsList(sourceMap,
-                            "paths", Collections.<String> emptyList());
-                    final List<String> roleList = MapUtil.getAsList(sourceMap,
-                            "roles", Collections.<String> emptyList());
-                    final String authName = MapUtil.getAsString(sourceMap,
-                            "authenticator", null);
-                    final Authenticator authenticator = authenticatorMap
-                            .get(authName);
-                    if (!pathList.isEmpty() && !roleList.isEmpty()
-                            && authenticator != null) {
-                        for (final String path : pathList) {
-                            LoginConstraint constraint = constraintMap
-                                    .get(path);
-                            if (constraint == null) {
-                                constraint = new LoginConstraint();
-                                constraint.setPath(path);
-                                constraintMap.put(path, constraint);
-                            }
-                            constraint
-                                    .addCondition(
-                                            methodList
-                                                    .toArray(new String[methodList
-                                                            .size()]),
-                                            roleList.toArray(new String[roleList
-                                                    .size()]));
-                        }
-                    } else {
-                        logger.warn("Invaid login settings: " + sourceMap);
-                    }
-                }
-            }
-
-            return constraintMap.values().toArray(
-                    new LoginConstraint[constraintMap.size()]);
-
-        } catch (final IndexMissingException e) {
-            logger.error(constraintIndex + "/" + constraintType
-                    + " is not found.", e);
-            throw new AuthException(RestStatus.INTERNAL_SERVER_ERROR,
-                    constraintIndex + ";" + constraintType + " is not found.");
-        }
 
     }
 

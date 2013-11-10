@@ -6,6 +6,7 @@ import org.codelibs.elasticsearch.auth.AuthException;
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
 import org.codelibs.elasticsearch.auth.util.ResponseUtil;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
@@ -17,7 +18,6 @@ import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestStatus;
 
 public class AccountRestAction extends BaseRestHandler {
@@ -71,56 +71,91 @@ public class AccountRestAction extends BaseRestHandler {
             }
         }
 
-        try {
-            if (request.method() == Method.PUT) {
-                if (authenticator == null || username == null
-                        || password == null || roles == null) {
-                    ResponseUtil
-                            .send(request, channel, RestStatus.BAD_REQUEST,
-                                    "message",
-                                    "authenticator, username, passowrd or roles is null.");
-                } else {
-                    authService.createUser(authenticator, username, password,
-                            roles);
-                    ResponseUtil.send(request, channel, RestStatus.OK);
-                }
-            } else if (request.method() == Method.POST) {
-                if (authenticator == null || username == null
-                        || password == null && roles == null) {
-                    ResponseUtil
-                            .send(request, channel, RestStatus.BAD_REQUEST,
-                                    "message",
-                                    "authenticator, username, passowrd or roles are null.");
-                } else {
-                    authService.updateUser(authenticator, username, password,
-                            roles);
-                    ResponseUtil.send(request, channel, RestStatus.OK);
-                }
-            } else if (request.method() == Method.DELETE) {
-                if (authenticator == null || username == null) {
-                    ResponseUtil.send(request, channel, RestStatus.BAD_REQUEST,
-                            "message", "authenticator or username are null.");
-                } else {
-                    authService.deleteUser(authenticator, username);
-                    ResponseUtil.send(request, channel, RestStatus.OK);
-                }
-            } else {
-                ResponseUtil
-                        .send(request, channel, RestStatus.BAD_REQUEST,
-                                "message", "Invalid method: "
-                                        + request.method().name());
-            }
-        } catch (final AuthException e) {
-            logger.error("An operation failed.", e);
-            ResponseUtil.send(request, channel, e.getStatus(), "message",
-                    e.getMessage());
-        } catch (final Exception e) {
-            logger.error("An operation failed.", e);
-            ResponseUtil
-                    .send(request, channel, RestStatus.INTERNAL_SERVER_ERROR,
-                            "message", e.getMessage());
-        }
+        processRequest(request, channel, authenticator, username, password,
+                roles);
 
+    }
+
+    private void processRequest(final RestRequest request,
+            final RestChannel channel, final String authenticator,
+            final String username, final String password, final String[] roles) {
+        switch (request.method()) {
+        case PUT:
+            authService.createUser(authenticator, username, password, roles,
+                    new ActionListener<Void>() {
+
+                        @Override
+                        public void onResponse(final Void response) {
+                            ResponseUtil.send(request, channel, RestStatus.OK);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            logger.error("Failed to create " + username, e);
+                            if (e instanceof AuthException) {
+                                ResponseUtil.send(request, channel,
+                                        (AuthException) e);
+                            } else {
+                                ResponseUtil.send(request, channel,
+                                        RestStatus.INTERNAL_SERVER_ERROR,
+                                        "message", "Could not create "
+                                                + username);
+                            }
+                        }
+                    });
+            break;
+        case POST:
+            authService.updateUser(authenticator, username, password, roles,
+                    new ActionListener<Void>() {
+                        @Override
+                        public void onResponse(final Void response) {
+                            ResponseUtil.send(request, channel, RestStatus.OK);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            logger.error("Failed to update " + username, e);
+                            if (e instanceof AuthException) {
+                                ResponseUtil.send(request, channel,
+                                        (AuthException) e);
+                            } else {
+                                ResponseUtil.send(request, channel,
+                                        RestStatus.INTERNAL_SERVER_ERROR,
+                                        "message", "Could not update "
+                                                + username);
+                            }
+                        }
+                    });
+            break;
+        case DELETE:
+            authService.deleteUser(authenticator, username,
+                    new ActionListener<Void>() {
+
+                        @Override
+                        public void onResponse(final Void response) {
+                            ResponseUtil.send(request, channel, RestStatus.OK);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            logger.error("Failed to delete " + username, e);
+                            if (e instanceof AuthException) {
+                                ResponseUtil.send(request, channel,
+                                        (AuthException) e);
+                            } else {
+                                ResponseUtil.send(request, channel,
+                                        RestStatus.INTERNAL_SERVER_ERROR,
+                                        "message", "Could not delete "
+                                                + username);
+                            }
+                        }
+                    });
+            break;
+        default:
+            ResponseUtil.send(request, channel, RestStatus.BAD_REQUEST,
+                    "message", "Invalid method: " + request.method().name());
+            break;
+        }
     }
 
 }

@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.auth.util;
 
 import java.io.IOException;
 
+import org.codelibs.elasticsearch.auth.AuthException;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -17,6 +18,11 @@ public class ResponseUtil {
             .getLogger(ResponseUtil.class);;
 
     private ResponseUtil() {
+    }
+
+    public static void send(final RestRequest request,
+            final RestChannel channel, final AuthException e) {
+        send(request, channel, e.getStatus(), "message", e.getMessage());
     }
 
     public static void send(final RestRequest request,

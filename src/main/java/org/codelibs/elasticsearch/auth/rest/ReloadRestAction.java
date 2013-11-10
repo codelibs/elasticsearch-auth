@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.auth.rest;
 
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.codelibs.elasticsearch.auth.util.ResponseUtil;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -29,13 +30,18 @@ public class ReloadRestAction extends BaseRestHandler {
     public void handleRequest(final RestRequest request,
             final RestChannel channel) {
 
-        try {
-            authService.reload();
-            ResponseUtil.send(request, channel, RestStatus.OK);
-        } catch (final Exception e) {
-            ResponseUtil.send(request, channel,
-                    RestStatus.INTERNAL_SERVER_ERROR, "message",
-                    "Failed to reload AuthService.");
-        }
+        authService.reload(new ActionListener<Void>() {
+            @Override
+            public void onResponse(final Void response) {
+                ResponseUtil.send(request, channel, RestStatus.OK);
+            }
+
+            @Override
+            public void onFailure(final Throwable e) {
+                ResponseUtil.send(request, channel,
+                        RestStatus.INTERNAL_SERVER_ERROR, "message",
+                        "Failed to reload AuthService.");
+            }
+        });
     }
 }

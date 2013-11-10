@@ -49,13 +49,15 @@ public class LoginConstraint {
     }
 
     private void addRoles(final Method method, final String[] roles) {
-        Set<String> roleSet = methodMap.get(method);
-        if (roleSet == null) {
-            roleSet = new HashSet<String>();
-            methodMap.put(method, roleSet);
-        }
-        for (final String role : roles) {
-            roleSet.add(role);
+        synchronized (methodMap) {
+            Set<String> roleSet = methodMap.get(method);
+            if (roleSet == null) {
+                roleSet = new HashSet<String>();
+                methodMap.put(method, roleSet);
+            }
+            for (final String role : roles) {
+                roleSet.add(role);
+            }
         }
     }
 

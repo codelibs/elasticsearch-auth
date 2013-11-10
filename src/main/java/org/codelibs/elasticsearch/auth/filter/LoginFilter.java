@@ -1,12 +1,13 @@
 package org.codelibs.elasticsearch.auth.filter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 
 import org.codelibs.elasticsearch.auth.security.Authenticator;
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.codelibs.elasticsearch.auth.util.ResponseUtil;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
@@ -40,33 +41,64 @@ public class LoginFilter extends RestFilter {
         if (rawPath.equals(loginPath)) {
             for (final Method method : methods) {
                 if (method == request.method()) {
-                    final List<String> roleList = new ArrayList<String>();
-                    for (final Map.Entry<String, Authenticator> entry : authenticatorMap
+                    final Map<String, String> roleMap = new ConcurrentHashMap<String, String>();
+                    final Map<String, Authenticator> authMap = authenticatorMap;
+                    final CountDownLatch latch = new CountDownLatch(
+                            authMap.size());
+                    for (final Map.Entry<String, Authenticator> entry : authMap
                             .entrySet()) {
-                        final String[] roles = entry.getValue().login(request);
-                        if (roles != null) {
-                            for (final String role : roles) {
-                                roleList.add(role);
-                            }
-                        }
-                    }
+                        entry.getValue().login(request,
+                                new ActionListener<String[]>() {
+                                    @Override
+                                    public void onResponse(final String[] roles) {
+                                        if (roles != null) {
+                                            for (final String role : roles) {
+                                                roleMap.put(role,
+                                                        entry.getKey());
+                                            }
+                                        }
+                                        latch.countDown();
+                                    }
 
-                    String token = null;
-                    if (!roleList.isEmpty()) {
-                        token = authService.createToken(roleList);
+                                    @Override
+                                    public void onFailure(final Throwable e) {
+                                        logger.warn(
+                                                "Failed to authenticate: "
+                                                        + entry.getKey() + "/"
+                                                        + entry.getValue(), e);
+                                        latch.countDown();
+                                    }
+                                });
                     }
+                    try {
+                        latch.await();
+                        authService.createToken(roleMap.keySet(),
+                                new ActionListener<String>() {
+                                    @Override
+                                    public void onResponse(final String token) {
+                                        if (logger.isDebugEnabled()) {
+                                            logger.debug("Token " + token
+                                                    + " is generated.");
+                                        }
+                                        ResponseUtil.send(request, channel,
+                                                RestStatus.OK, "token", token);
 
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Token " + token + " is generated.");
-                    }
+                                    }
 
-                    if (token == null) {
+                                    @Override
+                                    public void onFailure(final Throwable e) {
+                                        ResponseUtil
+                                                .send(request, channel,
+                                                        RestStatus.BAD_REQUEST,
+                                                        "message",
+                                                        "Invalid username or password.");
+                                    }
+                                });
+                    } catch (final Exception e) {
+                        logger.error("Login failed.", e);
                         ResponseUtil.send(request, channel,
-                                RestStatus.BAD_REQUEST, "message",
-                                "Invalid username or password.");
-                    } else {
-                        ResponseUtil.send(request, channel, RestStatus.OK,
-                                "token", token);
+                                RestStatus.INTERNAL_SERVER_ERROR, "message",
+                                "Login failed.");
                     }
                     return;
                 }
