@@ -80,6 +80,8 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
 
     private String cookieTokenName;
 
+    private boolean updateToken;
+
     @Inject
     public AuthService(final Settings settings, final Client client,
             final RestController restController) {
@@ -95,6 +97,8 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                 DEFAULT_CONSTRAINT_TYPE);
         cookieTokenName = settings.get("auth.token.cookie",
                 DEFAULT_COOKIE_TOKEN_NAME);
+        updateToken = settings.getAsBoolean("auth.token.update_by_request",
+                true);
         guestRole = settings.get("auth.role.guest", DEFAULT_GUEST_ROLE);
 
         if (cookieTokenName.trim().length() == 0
@@ -305,6 +309,9 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                                     for (final String tokenRole : tokenRoles) {
                                         if (role.equals(tokenRole)) {
                                             listener.onResponse(true);
+                                            if (updateToken) {
+                                                updateToken(token, sourceMap);
+                                            }
                                             return;
                                         }
                                     }
@@ -319,6 +326,24 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                         }
                     });
         }
+    }
+
+    private void updateToken(final String token,
+            final Map<String, Object> sourceMap) {
+        sourceMap.put("lastModified", new Date());
+        client.prepareIndex(authTokenIndex, tokenType, token)
+                .setSource(sourceMap)
+                .execute(new ActionListener<IndexResponse>() {
+                    @Override
+                    public void onResponse(final IndexResponse response) {
+                        // nothing
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        logger.warn("Failed to update token: " + token, e);
+                    }
+                });
     }
 
     public void createUser(final String authenticatorName,
