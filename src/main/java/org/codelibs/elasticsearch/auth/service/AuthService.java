@@ -357,14 +357,26 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
         }
     }
 
-    public void deleteToken(final String token) {
-        final DeleteResponse response = client
-                .prepareDelete(authTokenIndex, tokenType, token)
-                .setRefresh(true).execute().actionGet();
-        if (response.isNotFound()) {
-            throw new AuthException(RestStatus.BAD_REQUEST,
-                    "The token does not exist.");
-        }
+    public void deleteToken(final String token,
+            final ActionListener<Void> listener) {
+        client.prepareDelete(authTokenIndex, tokenType, token).setRefresh(true)
+                .execute(new ActionListener<DeleteResponse>() {
+                    @Override
+                    public void onResponse(final DeleteResponse response) {
+                        if (response.isNotFound()) {
+                            listener.onFailure(new AuthException(
+                                    RestStatus.BAD_REQUEST,
+                                    "The token does not exist."));
+                        } else {
+                            listener.onResponse(null);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
     }
 
     public String getToken(final RestRequest request) {

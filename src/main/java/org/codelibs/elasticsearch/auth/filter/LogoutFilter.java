@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.auth.filter;
 import org.codelibs.elasticsearch.auth.AuthException;
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.codelibs.elasticsearch.auth.util.ResponseUtil;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.rest.RestChannel;
@@ -35,19 +36,32 @@ public class LogoutFilter extends RestFilter {
                 if (method == request.method()) {
                     final String token = authService.getToken(request);
                     if (token != null) {
-                        try {
-                            authService.deleteToken(token);
-                            ResponseUtil.send(request, channel, RestStatus.OK);
-                        } catch (final AuthException e) {
-                            logger.warn("Failed to delete the token.", e);
-                            ResponseUtil.send(request, channel, e.getStatus(),
-                                    "message", e.getMessage());
-                        } catch (final Exception e) {
-                            logger.error("Failed to delete the token.", e);
-                            ResponseUtil.send(request, channel,
-                                    RestStatus.INTERNAL_SERVER_ERROR,
-                                    "message", "Failed to delete the token.");
-                        }
+                        authService.deleteToken(token,
+                                new ActionListener<Void>() {
+                                    @Override
+                                    public void onResponse(final Void response) {
+                                        ResponseUtil.send(request, channel,
+                                                RestStatus.OK);
+                                    }
+
+                                    @Override
+                                    public void onFailure(final Throwable e) {
+                                        logger.error(
+                                                "Failed to delete the token.",
+                                                e);
+                                        if (e instanceof AuthException) {
+                                            ResponseUtil.send(request, channel,
+                                                    (AuthException) e);
+                                        } else {
+                                            ResponseUtil
+                                                    .send(request,
+                                                            channel,
+                                                            RestStatus.INTERNAL_SERVER_ERROR,
+                                                            "message",
+                                                            "Failed to delete the token.");
+                                        }
+                                    }
+                                });
                     } else {
                         ResponseUtil.send(request, channel,
                                 RestStatus.BAD_REQUEST, "message",
