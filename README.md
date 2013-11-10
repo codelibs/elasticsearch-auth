@@ -15,12 +15,11 @@ This plugin consists of:
 | Auth   | elasticsearch |
 |:------:|:-------------:|
 | master | 0.90.5        |
+| 1.0.0  | 0.90.5        |
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin -install auth -url https://.../elasticsearch-auth...zip (see below)
-
-ZIP file for Auth plugin is in [HERE](https://oss.sonatype.org/content/repositories/snapshots/org/codelibs/elasticsearch-auth/).
+    $ $ES_HOME/bin/plugin -install org.codelibs/elasticsearch-auth/1.0.0
 
 ## User Management
 
@@ -29,7 +28,7 @@ The default implementation is that Auth plugin stores user info into Elasticsear
 If you want yoru own authentication system, such as LDAP, you can create your Authenticator class.
 
 IndexAuthenticator is a default implementation for managing users.
-The authenticator name is index.
+The authenticator name is 'index'.
 The user information contains a password and roles.
 
 ### Create User
@@ -98,8 +97,27 @@ The token is published by:
         \"username\" : \"testuser\",
         \"password\" : \"test123\"
     }"
+    
+and the response is:
+
+    {
+      "status" : 200,
+      "token" : "..."
+    }
 
 The published token is managed in your application, and then it needs to be set to a request parameter or a cookie.
+
+### Access to Elasticsearch
+
+Requesting with a token, the content will be obtained.
+
+    $ curl -XGET http://localhost:9200/aaa_search?q=\*:\*&token=...
+
+or
+
+    $ curl --cookie "eaid=..." -XGET http://localhost:9200/aaa/_search?q=\*:\*
+
+'eaid' is a token key on a cookie.
 
 ### Logout
 
