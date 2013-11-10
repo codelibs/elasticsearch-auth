@@ -18,7 +18,6 @@ import org.codelibs.elasticsearch.auth.filter.ContentFilter;
 import org.codelibs.elasticsearch.auth.filter.LoginFilter;
 import org.codelibs.elasticsearch.auth.filter.LogoutFilter;
 import org.codelibs.elasticsearch.auth.security.Authenticator;
-import org.codelibs.elasticsearch.auth.security.IndexAuthenticator;
 import org.codelibs.elasticsearch.auth.security.LoginConstraint;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
 import org.elasticsearch.ElasticSearchException;
@@ -105,19 +104,6 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                 || "false".equalsIgnoreCase(cookieTokenName)) {
             cookieToken = false;
         }
-
-        // Default 
-        final IndexAuthenticator indexAuthenticator = new IndexAuthenticator(
-                client);
-        final String indexName = settings.get("auth.authenticator.index.index");
-        if (indexName != null) {
-            indexAuthenticator.setIndex(indexName);
-        }
-        final String typeName = settings.get("auth.authenticator.index.type");
-        if (typeName != null) {
-            indexAuthenticator.setType(typeName);
-        }
-        registerAuthenticator("index", indexAuthenticator);
     }
 
     @Override

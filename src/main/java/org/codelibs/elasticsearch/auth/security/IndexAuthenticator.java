@@ -6,7 +6,9 @@ import java.util.Map;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.codelibs.elasticsearch.auth.AuthException;
+import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
+import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
@@ -14,8 +16,11 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.component.AbstractLifecycleComponent;
+import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -23,22 +28,53 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
-public class IndexAuthenticator implements Authenticator {
+public class IndexAuthenticator extends
+        AbstractLifecycleComponent<IndexAuthenticator> implements Authenticator {
     private static final ESLogger logger = Loggers
             .getLogger(IndexAuthenticator.class);;
 
     protected Client client;
 
-    private String authIndex = "auth";
+    protected AuthService authService;
 
-    private String userType = "user";
+    protected String authIndex;
 
-    private String usernameKey = "username";
+    protected String userType;
 
-    private String passwordKey = "password";
+    protected String usernameKey;
 
-    public IndexAuthenticator(final Client client) {
+    protected String passwordKey;
+
+    @Inject
+    public IndexAuthenticator(final Settings settings, final Client client,
+            final AuthService authService) {
+        super(settings);
         this.client = client;
+        this.authService = authService;
+
+        authIndex = settings.get("auth.authenticator.index.index", "auth");
+        userType = settings.get("auth.authenticator.index.type", "user");
+        usernameKey = settings.get("auth.authenticator.index.username",
+                "username");
+        passwordKey = settings.get("auth.authenticator.index.password",
+                "password");
+
+    }
+
+    @Override
+    protected void doStart() throws ElasticSearchException {
+        logger.info("Registering IndexAuthenticator.");
+        authService.registerAuthenticator("index", this);
+    }
+
+    @Override
+    protected void doStop() throws ElasticSearchException {
+
+    }
+
+    @Override
+    protected void doClose() throws ElasticSearchException {
+
     }
 
     @Override
@@ -225,14 +261,6 @@ public class IndexAuthenticator implements Authenticator {
             return "";
         }
         return DigestUtils.sha512Hex(password);
-    }
-
-    public void setIndex(final String index) {
-        authIndex = index;
-    }
-
-    public void setType(final String type) {
-        userType = type;
     }
 
 }

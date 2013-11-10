@@ -5,6 +5,7 @@ import java.util.Collection;
 import org.codelibs.elasticsearch.auth.module.AuthModule;
 import org.codelibs.elasticsearch.auth.rest.AccountRestAction;
 import org.codelibs.elasticsearch.auth.rest.ReloadRestAction;
+import org.codelibs.elasticsearch.auth.security.IndexAuthenticator;
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.component.LifecycleComponent;
@@ -45,6 +46,7 @@ public class AuthPlugin extends AbstractPlugin {
         final Collection<Class<? extends LifecycleComponent>> services = Lists
                 .newArrayList();
         services.add(AuthService.class);
+        services.add(IndexAuthenticator.class);
         return services;
     }
 }
