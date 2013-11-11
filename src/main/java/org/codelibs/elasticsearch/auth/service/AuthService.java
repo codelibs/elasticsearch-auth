@@ -461,12 +461,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                                         .getAsList(sourceMap, "roles",
                                                 Collections
                                                         .<String> emptyList());
-                                final String authName = MapUtil.getAsString(
-                                        sourceMap, "authenticator", null);
-                                final Authenticator authenticator = authenticatorMap
-                                        .get(authName);
-                                if (!pathList.isEmpty() && !roleList.isEmpty()
-                                        && authenticator != null) {
+                                if (!pathList.isEmpty() && !roleList.isEmpty()) {
                                     for (final String path : pathList) {
                                         LoginConstraint constraint = constraintMap
                                                 .get(path);
