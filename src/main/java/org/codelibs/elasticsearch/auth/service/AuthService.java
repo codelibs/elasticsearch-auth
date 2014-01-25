@@ -20,7 +20,7 @@ import org.codelibs.elasticsearch.auth.filter.LogoutFilter;
 import org.codelibs.elasticsearch.auth.security.Authenticator;
 import org.codelibs.elasticsearch.auth.security.LoginConstraint;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
-import org.elasticsearch.ElasticSearchException;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
@@ -107,7 +107,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     @Override
-    protected void doStart() throws ElasticSearchException {
+    protected void doStart() throws ElasticsearchException {
         logger.info("Starting AuthService.");
 
         final LoginFilter loginFilter = new LoginFilter(this, authenticatorMap);
@@ -139,12 +139,12 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     @Override
-    protected void doStop() throws ElasticSearchException {
+    protected void doStop() throws ElasticsearchException {
         logger.info("Stopping AuthService");
     }
 
     @Override
-    protected void doClose() throws ElasticSearchException {
+    protected void doClose() throws ElasticsearchException {
         logger.info("Closing AuthService.");
     }
 
@@ -374,12 +374,12 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                 .execute(new ActionListener<DeleteResponse>() {
                     @Override
                     public void onResponse(final DeleteResponse response) {
-                        if (response.isNotFound()) {
-                            listener.onFailure(new AuthException(
-                                    RestStatus.BAD_REQUEST,
-                                    "The token does not exist."));
-                        } else {
+                        if (response.isFound()) {
                             listener.onResponse(null);
+                        } else {
+                            listener.onFailure(new AuthException(
+                                RestStatus.BAD_REQUEST,
+                                "The token does not exist."));
                         }
                     }
 

@@ -8,7 +8,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.codelibs.elasticsearch.auth.AuthException;
 import org.codelibs.elasticsearch.auth.service.AuthService;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
-import org.elasticsearch.ElasticSearchException;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
@@ -62,18 +62,18 @@ public class IndexAuthenticator extends
     }
 
     @Override
-    protected void doStart() throws ElasticSearchException {
+    protected void doStart() throws ElasticsearchException {
         logger.info("Registering IndexAuthenticator.");
         authService.registerAuthenticator("index", this);
     }
 
     @Override
-    protected void doStop() throws ElasticSearchException {
+    protected void doStop() throws ElasticsearchException {
 
     }
 
     @Override
-    protected void doClose() throws ElasticSearchException {
+    protected void doClose() throws ElasticsearchException {
 
     }
 
@@ -233,12 +233,12 @@ public class IndexAuthenticator extends
 
                     @Override
                     public void onResponse(final DeleteResponse response) {
-                        if (response.isNotFound()) {
-                            listener.onFailure(new AuthException(
-                                    RestStatus.BAD_REQUEST, "Could not delete "
-                                            + username));
-                        } else {
+                        if (response.isFound()) {
                             listener.onResponse(null);
+                        } else {
+                            listener.onFailure(new AuthException(
+                                RestStatus.BAD_REQUEST, "Could not delete "
+                                + username));
                         }
                     }
 
