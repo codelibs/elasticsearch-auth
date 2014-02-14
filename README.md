@@ -20,7 +20,7 @@ This plugin consists of:
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-auth/1.0.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-auth/1.1.0
 
 ## User Management
 
