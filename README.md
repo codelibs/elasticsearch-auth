@@ -14,12 +14,13 @@ This plugin consists of:
 
 | Auth   | elasticsearch |
 |:------:|:-------------:|
-| master | 0.90.5        |
+| master | 1.0.x         |
+| 1.1.0  | 1.0.0         |
 | 1.0.0  | 0.90.5        |
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin -install org.codelibs/elasticsearch-auth/1.0.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-auth/1.0.0
 
 ## User Management
 
