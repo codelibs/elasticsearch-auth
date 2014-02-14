@@ -20,7 +20,7 @@ import org.codelibs.elasticsearch.auth.filter.LogoutFilter;
 import org.codelibs.elasticsearch.auth.security.Authenticator;
 import org.codelibs.elasticsearch.auth.security.LoginConstraint;
 import org.codelibs.elasticsearch.auth.util.MapUtil;
-import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
@@ -107,7 +107,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     @Override
-    protected void doStart() throws ElasticsearchException {
+    protected void doStart() throws ElasticSearchException {
         logger.info("Starting AuthService.");
 
         final LoginFilter loginFilter = new LoginFilter(this, authenticatorMap);
@@ -139,12 +139,12 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     @Override
-    protected void doStop() throws ElasticsearchException {
+    protected void doStop() throws ElasticSearchException {
         logger.info("Stopping AuthService");
     }
 
     @Override
-    protected void doClose() throws ElasticsearchException {
+    protected void doClose() throws ElasticSearchException {
         logger.info("Closing AuthService.");
     }
 
@@ -374,7 +374,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
                 .execute(new ActionListener<DeleteResponse>() {
                     @Override
                     public void onResponse(final DeleteResponse response) {
-                        if (response.isFound()) {
+                        if (!response.isNotFound()) {
                             listener.onResponse(null);
                         } else {
                             listener.onFailure(new AuthException(
