@@ -17,7 +17,10 @@ This plugin consists of:
 | master | 1.0.x         |
 | 1.1.0  | 1.0.0         |
 | 1.0.1  | 0.90.11       |
-| 1.0.0  | 0.90.5        |
+
+### Issues/Questions
+
+Please file an [issue](https://github.com/codelibs/elasticsearch-auth/issues "issue").
 
 ## Installation
 
