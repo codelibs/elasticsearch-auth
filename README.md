@@ -22,6 +22,7 @@ This plugin consists of:
 ### Issues/Questions
 
 Please file an [issue](https://github.com/codelibs/elasticsearch-auth/issues "issue").
+(Japanese forum is [here](https://github.com/codelibs/codelibs-ja-forum "here").)
 
 ## Installation
 
