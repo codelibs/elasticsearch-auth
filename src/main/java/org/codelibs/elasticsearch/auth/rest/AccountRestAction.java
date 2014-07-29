@@ -39,8 +39,8 @@ public class AccountRestAction extends BaseRestHandler {
     }
 
     @Override
-    public void handleRequest(final RestRequest request,
-            final RestChannel channel) {
+    protected void handleRequest(final RestRequest request,
+            final RestChannel channel, final Client client) {
         final BytesReference content = request.content();
         final XContentType xContentType = XContentFactory.xContentType(content);
         XContentParser parser = null;

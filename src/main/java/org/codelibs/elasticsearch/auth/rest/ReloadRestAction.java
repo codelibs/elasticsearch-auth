@@ -27,8 +27,8 @@ public class ReloadRestAction extends BaseRestHandler {
     }
 
     @Override
-    public void handleRequest(final RestRequest request,
-            final RestChannel channel) {
+    protected void handleRequest(final RestRequest request,
+            final RestChannel channel, final Client client) {
 
         authService.reload(new ActionListener<Void>() {
             @Override
