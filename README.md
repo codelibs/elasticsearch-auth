@@ -15,6 +15,7 @@ This plugin consists of:
 | Auth   | elasticsearch |
 |:------:|:-------------:|
 | master | 1.2.x         |
+| 1.3.0  | 1.3.1         |
 | 1.2.0  | 1.2.1         |
 | 1.1.0  | 1.0.0         |
 | 1.0.1  | 0.90.11       |
@@ -26,7 +27,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-auth/issues "is
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-auth/1.2.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-auth/1.3.0
 
 ## User Management
 
