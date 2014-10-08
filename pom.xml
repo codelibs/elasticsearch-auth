@@ -46,7 +46,7 @@
 				<version>2.11</version>
 				<configuration>
 					<includes>
-						<include>**/*Tests.java</include>
+						<include>**/*Test.java</include>
 					</includes>
 				</configuration>
 			</plugin>
@@ -93,6 +93,18 @@
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
 			<version>1.8</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.codelibs</groupId>
+			<artifactId>elasticsearch-cluster-runner</artifactId>
+			<version>1.3.2.3</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
