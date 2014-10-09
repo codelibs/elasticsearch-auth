@@ -99,71 +99,71 @@ public class AuthPluginTest extends TestCase {
         String tokenTaro = loginTaroResponseContentAsMap.get("token").toString();
 
         try (CurlResponse curlResponse = Curl.get(node, "/aaa/_search")
-                .param("q", ":*:").param("token", tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+                .param("q", "*:*").param("token", tokenTaro).execute()) {
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/bbb/_search")
                 .param("q", "*:*").param("token", tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ccc/_search")
                 .param("q", "*:*").param("token", tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ddd/_search")
                 .param("q", "*:*").param("token", tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.put(node, "/aaa/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/bbb/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ccc/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ddd/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/aaa/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/bbb/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ccc/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ddd/user/1")
                 .param("token", tokenTaro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.delete(node, "/aaa/user/1?token=" + tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/bbb/user/1?token=" + tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ccc/user/1?token=" + tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ddd/user/1?token=" + tokenTaro).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/logout?token=" + tokenTaro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         };
 
         // Username: jiro(manager)
@@ -173,71 +173,71 @@ public class AuthPluginTest extends TestCase {
         String tokenJiro = loginJiroResponseContentAsMap.get("token").toString();
 
         try (CurlResponse curlResponse = Curl.get(node, "/aaa/_search")
-                .param("q", ":*:").param("token", tokenJiro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+                .param("q", "*:*").param("token", tokenJiro).execute()) {
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/bbb/_search")
                 .param("q", "*:*").param("token", tokenJiro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ccc/_search")
                 .param("q", "*:*").param("token", tokenJiro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ddd/_search")
                 .param("q", "*:*").param("token", tokenJiro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.put(node, "/aaa/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/bbb/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ccc/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ddd/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/aaa/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/bbb/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ccc/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ddd/manager/1")
                 .param("token", tokenJiro).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.delete(node, "/aaa/manager/1?token=" + tokenJiro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/bbb/manager/1?token=" + tokenJiro).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ccc/manager/1?token=" + tokenJiro).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ddd/manager/1?token=" + tokenJiro).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/logout?token=" + tokenJiro).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         };
 
         // Username: hanako(admin,manager)
@@ -248,70 +248,70 @@ public class AuthPluginTest extends TestCase {
 
         try (CurlResponse curlResponse = Curl.get(node, "/aaa/_search")
                 .param("q", "*:*").param("token", tokenHanako).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/bbb/_search")
                 .param("q", "*:*").param("token", tokenHanako).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ccc/_search")
                 .param("q", "*:*").param("token", tokenHanako).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ddd/_search")
                 .param("q", "*:*").param("token", tokenHanako).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.put(node, "/aaa/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/bbb/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ccc/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ddd/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/aaa/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/bbb/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ccc/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ddd/admin/1")
                 .param("token", tokenHanako).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.delete(node, "/aaa/admin/1?token=" + tokenHanako).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/bbb/admin/1?token=" + tokenHanako).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ccc/admin/1?token=" + tokenHanako).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ddd/admin/1?token=" + tokenHanako).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/logout?token=" + tokenHanako).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         // Username: admin
@@ -322,123 +322,123 @@ public class AuthPluginTest extends TestCase {
 
         try (CurlResponse curlResponse = Curl.get(node, "/aaa/_search")
                 .param("q", "*:*").param("token", tokenAdmin).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/bbb/_search")
                 .param("q", "*:*").param("token", tokenAdmin).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ccc/_search")
                 .param("q", "*:*").param("token", tokenAdmin).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ddd/_search")
                 .param("q", "*:*").param("token", tokenAdmin).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.put(node, "/aaa/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/bbb/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ccc/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ddd/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/aaa/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/bbb/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ccc/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ddd/admin/1")
                 .param("token", tokenAdmin).body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("created"), false);
+            assertEquals(false, curlResponse.getContentAsMap().get("created"));
         }
 
         try (CurlResponse curlResponse = Curl.delete(node, "/aaa/admin/1?token=" + tokenAdmin).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/bbb/admin/1?token=" + tokenAdmin).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ccc/admin/1?token=" + tokenAdmin).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ddd/admin/1?token=" + tokenAdmin).execute()) {
-            assertEquals(curlResponse.getContentAsMap().get("found"), true);
+            assertEquals(true, curlResponse.getContentAsMap().get("found"));
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/logout?token=" + tokenAdmin).execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         // Username: guest
-        try (CurlResponse curlResponse = Curl.get(node, "/aaa/_search").param("q", ":*:").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+        try (CurlResponse curlResponse = Curl.get(node, "/aaa/_search").param("q", "*:*").execute()) {
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/bbb/_search").param("q", "*:*").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ccc/_search").param("q", "*:*").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.get(node, "/ddd/_search").param("q", "*:*").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 200);
+            assertEquals(200, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.put(node, "/aaa/guest/1").body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/bbb/guest/1").body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ccc/guest/1").body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.put(node, "/ddd/guest/1").body("{\"message\":\"test1\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.post(node, "/aaa/guest/1").body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/bbb/guest/1").body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ccc/guest/1").body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.post(node, "/ddd/guest/1").body("{\"message\":\"test2\"}").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
 
         try (CurlResponse curlResponse = Curl.delete(node, "/aaa/guest/1").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/bbb/guest/1").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ccc/guest/1").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
         try (CurlResponse curlResponse = Curl.delete(node, "/ddd/guest/1").execute()) {
-            assertEquals(curlResponse.getHttpStatusCode(), 403);
+            assertEquals(403, curlResponse.getHttpStatusCode());
         }
     }
 }
