@@ -19,7 +19,7 @@ public class ReloadRestAction extends BaseRestHandler {
     @Inject
     public ReloadRestAction(final Settings settings, final Client client,
             final RestController restController, final AuthService authService) {
-        super(settings, client);
+        super(settings, restController, client);
         this.authService = authService;
 
         restController.registerHandler(RestRequest.Method.POST,
