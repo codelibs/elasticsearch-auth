@@ -27,8 +27,9 @@ public class AuthPluginTest extends TestCase {
             public void build(final int number, final Builder settingBuilder) {
             }
         }).build(
-                newConfigs().clusterName("es-auth").ramIndexStore()
-                        .numOfNode(1));
+                newConfigs()
+                        .clusterName("es-auth" + System.currentTimeMillis())
+                        .ramIndexStore().numOfNode(1));
 
         // wait for yellow status
         runner.ensureYellow();
