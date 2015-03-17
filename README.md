@@ -34,7 +34,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-auth/issues "is
 
 The user management feature for Auth plugin is an extensible implementation. 
 The default implementation is that Auth plugin stores user info into Elasticsearch index (org.codelibs.elasticsearch.auth.security.Authenticator).
-If you want yoru own authentication system, such as LDAP, you can create your Authenticator class.
+If you want your own authentication system, such as LDAP, you can create your Authenticator class.
 
 IndexAuthenticator is a default implementation for managing users.
 The authenticator name is 'index'.
