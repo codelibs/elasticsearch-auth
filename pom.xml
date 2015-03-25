@@ -27,7 +27,7 @@
         <version>9</version>
     </parent>
 	<properties>
-		<elasticsearch.version>1.4.0</elasticsearch.version>
+		<elasticsearch.version>1.4.4</elasticsearch.version>
 	</properties>
 	<build>
 		<plugins>
@@ -104,7 +104,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>1.4.0.0</version>
+			<version>1.4.2.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
