@@ -34,9 +34,9 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.netty.handler.codec.http.Cookie;
-import org.elasticsearch.common.netty.handler.codec.http.CookieDecoder;
 import org.elasticsearch.common.netty.handler.codec.http.HttpHeaders;
+import org.elasticsearch.common.netty.handler.codec.http.cookie.Cookie;
+import org.elasticsearch.common.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.rest.RestController;
@@ -211,7 +211,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     }
 
     public void reload(final ActionListener<Void> listener) {
-        client.admin().indices().prepareRefresh(constraintIndex).setForce(true)
+        client.admin().indices().prepareRefresh(constraintIndex)
                 .execute(new ActionListener<RefreshResponse>() {
                     @Override
                     public void onResponse(final RefreshResponse response) {
@@ -397,11 +397,10 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
             final String cookieString = request
                     .header(HttpHeaders.Names.COOKIE);
             if (cookieString != null) {
-                final CookieDecoder cookieDecoder = new CookieDecoder();
-                final Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+                final Set<Cookie> cookies = ServerCookieDecoder.LAX.decode(cookieString);
                 for (final Cookie cookie : cookies) {
-                    if (cookieTokenName.equals(cookie.getName())) {
-                        token = cookie.getValue();
+                    if (cookieTokenName.equals(cookie.name())) {
+                        token = cookie.value();
                         break;
                     }
                 }
@@ -427,7 +426,7 @@ public class AuthService extends AbstractLifecycleComponent<AuthService> {
     protected void loadLoginConstraints(
             final ActionListener<LoginConstraint[]> listener) {
         client.prepareSearch(constraintIndex).setTypes(constraintType)
-                .setQuery(QueryBuilders.queryString("*:*"))
+                .setQuery(QueryBuilders.queryStringQuery("*:*"))
                 .execute(new ActionListener<SearchResponse>() {
                     @Override
                     public void onResponse(final SearchResponse response) {
