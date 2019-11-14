@@ -73,7 +73,7 @@ public class ContentFilter extends RestFilter {
         for (final LoginConstraint constraint : constraints) {
             if (constraint.match(rawPath)) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug(rawPath + " is filtered.");
+                    logger.debug("{} is filtered.", rawPath);
                 }
 
                 final String token = authService.getToken(request);
